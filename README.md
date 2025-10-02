@@ -123,7 +123,7 @@ CREATE TABLE `salaries` (
 5. **ファイルをWebサーバーにアップロード**
 
 6. **アプリケーションにアクセス:**
-   - 次のURLに移動: `your-domain.com/salary_jap/auth/login.php`
+   - 次のURLに移動: `https://241033.daa.jp/salary_jap/auth/login.php`
 
 ## ファイル構造
 
@@ -204,11 +204,9 @@ MITライセンス
 
 ## 作成者
 
-**ポーデル　マノジュ　クマール** (Poudel Manoju Kumar)
+**ポーデル　マノジュ　クマール** (Paudel Manoj Kumar)
 
 - GitHub: [@manojpoudel9256](https://github.com/manojpoudel9256)
 - プロジェクトリポジトリ: [給与トラッカー](https://github.com/manojpoudel9256/salary-tracker-jap)
 
 ---
-
-**注意:** スクリーンショットを追加するには、プロジェクトに`screenshots`フォルダを作成し、各ページの画像（login.png、dashboard.pngなど）を追加してください。
