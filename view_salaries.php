@@ -4,6 +4,42 @@ include 'config/db.php';
 
 $user_id = $_SESSION['user_id'];
 $store_filter = $_GET['store'] ?? 'All';
+$lang = $_SESSION['lang'] ?? 'en';
+
+// Translations
+$trans = [
+    'en' => [
+        'title' => 'Salary History',
+        'filter_label' => 'Filter by Store',
+        'all_stores' => 'All Stores',
+        'total_earned' => 'Total Earned',
+        'empty_state' => 'No salary records found.',
+        'received' => 'Received',
+        'month' => 'For Month',
+        'notes' => 'Notes',
+        'edit' => 'Edit',
+        'delete' => 'Delete',
+        'confirm_delete' => 'Are you sure you want to delete this record?',
+        'back' => 'Dashboard',
+        'export' => 'Export CSV'
+    ],
+    'jp' => [
+        'title' => '給与履歴',
+        'filter_label' => '店舗で絞り込み',
+        'all_stores' => 'すべての店舗',
+        'total_earned' => '総支給額',
+        'empty_state' => '給与記録が見つかりません。',
+        'received' => '受領日',
+        'month' => '対象月',
+        'notes' => 'メモ',
+        'edit' => '編集',
+        'delete' => '削除',
+        'confirm_delete' => '本当にこの記録を削除しますか？',
+        'back' => 'ダッシュボード',
+        'export' => 'CSV出力'
+    ]
+];
+$t = $trans[$lang];
 
 // Get all unique store names for filter dropdown
 $stmt_stores = $pdo->prepare("SELECT DISTINCT store_name FROM salaries WHERE user_id = ? ORDER BY store_name ASC");
@@ -28,510 +64,354 @@ $salaries = $stmt->fetchAll();
 $total = array_sum(array_column($salaries, 'amount'));
 
 // Generate consistent color for each store
-function getStoreColor($store) {
-    $colors = ['#4361ee', '#06d6a0', '#f72585', '#ffbe0b', '#7209b7', '#4cc9f0', '#ff6b35', '#06ffa5'];
+function getStoreColor($store)
+{
+    // Premium Palette matching the theme
+    $colors = ['#4facfe', '#00f2fe', '#43e97b', '#fa709a', '#fee140', '#a18cd1', '#fbc2eb', '#8fd3f4'];
     return $colors[crc32($store) % count($colors)];
 }
 ?>
 
 <!DOCTYPE html>
-<html lang="jp">
+<html lang="<?= $lang ?>">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>あなたの給与記録</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title><?= $t['title'] ?> | Salary Tracker</title>
 
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <!-- Libraries -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
+    <!-- App Icons -->
+    <link rel="icon" href="icon/salarytrackericon.png" type="image/png">
+    <link rel="apple-touch-icon" href="icon/apple-touch-icon.png">
+
+    <style>
         :root {
-            --primary: #4361ee;
-            --secondary: #3a0ca3;
-            --accent: #f72585;
-            --success: #06d6a0;
-            --warning: #ffbe0b;
+            /* Premium Color Palette */
+            --bg-gradient-start: #0f0c29;
+            --bg-gradient-mid: #302b63;
+            --bg-gradient-end: #24243e;
+
+            --glass-bg: rgba(255, 255, 255, 0.08);
+            --glass-border: rgba(255, 255, 255, 0.12);
+            --glass-blur: blur(20px);
+
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.7);
+
+            --accent-primary: #4facfe;
+            --btn-radius: 16px;
+
+            --safe-top: env(safe-area-inset-top);
+            --safe-bottom: env(safe-area-inset-bottom);
         }
 
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Poppins', sans-serif;
+            -webkit-tap-highlight-color: transparent;
         }
 
         body {
-            background: linear-gradient(125deg, #4cc9f0, #4361ee, #7209b7, #f72585);
-            background-size: 300% 300%;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: linear-gradient(135deg, var(--bg-gradient-start), var(--bg-gradient-mid), var(--bg-gradient-end));
+            background-size: 400% 400%;
             animation: gradientBG 15s ease infinite;
             min-height: 100vh;
-            padding: 15px;
+            color: var(--text-primary);
+            padding-top: calc(var(--safe-top) + 20px);
+            padding-bottom: calc(var(--safe-bottom) + 80px);
+            /* Extra padding for total footer */
         }
 
         @keyframes gradientBG {
-            0%, 100% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
+            0% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+
+            100% {
+                background-position: 0% 50%;
+            }
         }
 
         .container {
-            max-width: 1200px;
-            margin: 20px auto;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 0 20px;
         }
 
+        /* Header */
         .page-header {
-            text-align: center;
-            margin-bottom: 25px;
-            color: white;
-            text-shadow: 0px 2px 10px rgba(0, 0, 0, 0.3);
-            animation: fadeInDown 1s ease-out;
-        }
-
-        .page-header h2 {
-            font-weight: 700;
-            font-size: 1.8rem;
-            display: inline-block;
-        }
-
-        .page-header h2::after {
-            content: '💰';
-            margin-left: 10px;
-            animation: bounceMoney 2s infinite ease-in-out;
-        }
-
-        @keyframes bounceMoney {
-            0%, 100% { transform: translateY(0) rotate(0deg); }
-            50% { transform: translateY(-10px) rotate(10deg); }
-        }
-
-        @keyframes fadeInDown {
-            from { opacity: 0; transform: translateY(-20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .filter-section {
-            background: rgba(255, 255, 255, 0.2);
-            backdrop-filter: blur(10px);
-            border-radius: 15px;
-            padding: 15px;
-            margin-bottom: 20px;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-        }
-
-        .filter-label {
-            color: white;
-            font-weight: 600;
             display: flex;
             align-items: center;
-            gap: 8px;
-            font-size: 0.95rem;
+            justify-content: space-between;
+            margin-bottom: 24px;
         }
 
-        .form-select {
-            border-radius: 10px;
-            border: none;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-            padding: 10px 15px;
-            background-color: rgba(255, 255, 255, 0.9);
-            transition: all 0.3s;
-            font-size: 0.95rem;
+        .back-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-primary);
+            text-decoration: none;
+            backdrop-filter: var(--glass-blur);
         }
 
-        .form-select:focus {
-            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.25);
+        .page-title {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 700;
+            font-size: 20px;
+            margin: 0;
         }
 
-        /* Desktop Table View */
-        .desktop-table {
-            display: block;
+        .export-btn {
+            font-size: 18px;
+            color: var(--accent-primary);
+            text-decoration: none;
         }
 
-        .mobile-cards {
-            display: none;
+        /* Filter */
+        .filter-container {
+            margin-bottom: 24px;
         }
 
-        .data-card {
-            border-radius: 20px;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
-            animation: cardEntrance 1s ease-out;
-            border: none;
-            overflow: hidden;
-        }
-
-        @keyframes cardEntrance {
-            from { opacity: 0; transform: translateY(30px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .table thead {
-            background: linear-gradient(90deg, var(--primary), var(--secondary));
-            color: white;
-        }
-
-        .table thead th {
-            border: none;
-            padding: 15px;
-            font-weight: 600;
-            text-transform: uppercase;
-            font-size: 0.9rem;
-        }
-
-        .table tbody tr {
-            transition: all 0.3s;
-        }
-
-        .table tbody tr:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-
-        .table td {
-            padding: 15px;
-            vertical-align: middle;
-            border-color: rgba(0, 0, 0, 0.05);
-        }
-
-        .store-badge {
-            display: inline-block;
-            padding: 6px 16px;
-            border-radius: 50px;
-            color: white;
-            font-weight: 600;
-            font-size: 0.85rem;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
-            white-space: nowrap;
-        }
-
-        .btn-action {
-            border-radius: 50px;
-            padding: 6px 15px;
+        .filter-select {
+            width: 100%;
+            padding: 16px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--btn-radius);
+            color: var(--text-primary);
+            font-size: 14px;
             font-weight: 500;
-            font-size: 0.85rem;
-            transition: all 0.3s;
-            margin: 2px;
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            white-space: nowrap;
+            backdrop-filter: var(--glass-blur);
+            outline: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 16px center;
+            background-size: 16px;
         }
 
-        .btn-warning {
-            background-color: var(--warning);
-            border: none;
-            color: #212529;
-            box-shadow: 0 5px 10px rgba(255, 190, 11, 0.3);
-        }
-
-        .btn-danger {
-            background-color: var(--accent);
-            border: none;
-            color: white;
-            box-shadow: 0 5px 10px rgba(247, 37, 133, 0.3);
-        }
-
-        .btn-warning:hover, .btn-danger:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
-        }
-
-        .btn-export {
-            background: linear-gradient(45deg, var(--primary), var(--secondary));
-            border: none;
-            border-radius: 50px;
-            padding: 12px 25px;
-            color: white;
-            font-weight: 600;
-            box-shadow: 0 10px 20px rgba(67, 97, 238, 0.3);
-            transition: all 0.3s;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            text-decoration: none;
-            font-size: 0.95rem;
-        }
-
-        .btn-export:hover {
-            transform: translateY(-3px);
-            background: linear-gradient(45deg, var(--secondary), var(--accent));
-            box-shadow: 0 15px 25px rgba(67, 97, 238, 0.4);
+        .filter-select option {
+            background: #24243e;
             color: white;
         }
 
-        .total-section {
-            background: linear-gradient(45deg, var(--primary), var(--secondary));
-            color: white;
-            border-radius: 15px;
-            padding: 20px 25px;
-            margin-top: 20px;
-            box-shadow: 0 10px 25px rgba(67, 97, 238, 0.4);
+        /* Salary Cards */
+        .salary-list {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
+            flex-direction: column;
+            gap: 16px;
         }
 
-        .total-label {
-            font-weight: 600;
-            font-size: 1.1rem;
-            margin: 0;
-        }
-
-        .total-amount {
-            font-weight: 700;
-            font-size: 1.5rem;
-            margin: 0;
-        }
-
-        .back-link {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            color: white;
-            text-decoration: none;
-            font-weight: 600;
-            padding: 12px 25px;
-            background: rgba(255, 255, 255, 0.2);
-            backdrop-filter: blur(10px);
-            border-radius: 50px;
-            transition: all 0.3s;
-            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3);
-            border: 2px solid rgba(255, 255, 255, 0.3);
-        }
-
-        .back-link:hover {
-            transform: translateX(-5px);
-            background: rgba(255, 255, 255, 0.3);
-            color: white;
-        }
-
-        /* Mobile Card View */
         .salary-card {
-            background: white;
-            border-radius: 15px;
-            padding: 18px;
-            margin-bottom: 15px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-            animation: slideUp 0.5s ease-out;
-            border-left: 5px solid var(--primary);
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            backdrop-filter: var(--glass-blur);
+            border-radius: 20px;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.2s;
+            animation: fadeInUp 0.5s ease-out backwards;
         }
 
-        @keyframes slideUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+        .salary-card:active {
+            transform: scale(0.98);
         }
 
-        .salary-card-header {
+        .card-left-border {
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 6px;
+        }
+
+        .card-header-row {
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            margin-bottom: 12px;
-            padding-bottom: 12px;
-            border-bottom: 2px solid #f0f0f0;
+            align-items: flex-start;
+            margin-bottom: 8px;
         }
 
-        .salary-card-amount {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--primary);
-        }
-
-        .salary-card-body {
-            margin-bottom: 12px;
-        }
-
-        .salary-info-row {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 10px;
-            font-size: 0.9rem;
-        }
-
-        .salary-info-row i {
-            width: 20px;
-            color: var(--primary);
-        }
-
-        .salary-info-label {
+        .store-name {
             font-weight: 600;
-            color: #666;
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 2px;
+        }
+
+        .record-date {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        .salary-amount {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 700;
+            font-size: 24px;
+            color: var(--text-primary);
+        }
+
+        .card-details {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .detail-row {
+            display: flex;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .detail-label {
             min-width: 80px;
         }
 
-        .salary-info-value {
-            color: #333;
-            flex: 1;
-        }
-
-        .salary-card-actions {
+        .card-actions {
+            margin-top: 15px;
             display: flex;
             gap: 10px;
-            margin-top: 15px;
-            padding-top: 15px;
-            border-top: 2px solid #f0f0f0;
         }
 
-        .salary-card-actions .btn-action {
+        .action-chip {
             flex: 1;
-            justify-content: center;
-            padding: 10px 15px;
+            padding: 8px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 600;
+            text-decoration: none;
+            text-align: center;
+            transition: background 0.2s;
         }
 
+        .chip-edit {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .chip-delete {
+            background: rgba(220, 53, 69, 0.15);
+            color: #ff6b6b;
+            border: 1px solid rgba(220, 53, 69, 0.2);
+        }
+
+        /* Empty State */
         .empty-state {
             text-align: center;
-            padding: 60px 20px;
-            color: #666;
+            padding: 40px 20px;
+            color: var(--text-secondary);
         }
 
-        .empty-state i {
-            font-size: 64px;
-            color: #ddd;
-            margin-bottom: 20px;
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
         }
 
-        .empty-state-text {
-            font-size: 1.1rem;
-            font-weight: 500;
+        /* Sticky Total Footer */
+        .footer-total {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: calc(100% - 40px);
+            max-width: 460px;
+            background: rgba(20, 20, 30, 0.9);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 20px;
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            z-index: 100;
         }
 
-        /* Mobile Responsive */
-        @media (max-width: 768px) {
-            body {
-                padding: 10px;
+        .total-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .total-value {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 700;
+            font-size: 18px;
+            color: #4facfe;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
             }
 
-            .container {
-                margin: 10px auto;
-                padding: 0;
-            }
-
-            .page-header {
-                margin-bottom: 20px;
-            }
-
-            .page-header h2 {
-                font-size: 1.5rem;
-            }
-
-            .filter-section {
-                padding: 12px;
-                margin-bottom: 15px;
-            }
-
-            .filter-section form {
-                flex-direction: column;
-                align-items: stretch !important;
-                gap: 10px !important;
-            }
-
-            .filter-label {
-                font-size: 0.9rem;
-            }
-
-            .form-select {
-                width: 100% !important;
-                font-size: 0.9rem;
-            }
-
-            /* Hide table, show cards */
-            .desktop-table {
-                display: none;
-            }
-
-            .mobile-cards {
-                display: block;
-            }
-
-            .total-section {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 8px;
-                padding: 15px 20px;
-            }
-
-            .total-label {
-                font-size: 1rem;
-            }
-
-            .total-amount {
-                font-size: 1.8rem;
-            }
-
-            .back-link {
-                padding: 10px 20px;
-                font-size: 0.9rem;
-                width: 100%;
-                justify-content: center;
-            }
-
-            .btn-export {
-                padding: 10px 20px;
-                font-size: 0.9rem;
-                width: 100%;
-                justify-content: center;
-            }
-
-            .d-flex.justify-content-between {
-                flex-direction: column;
-                gap: 10px;
+            to {
+                opacity: 1;
+                transform: translateY(0);
             }
         }
 
-        @media (max-width: 576px) {
-            .page-header h2 {
-                font-size: 1.3rem;
+        /* Staggered Delay */
+        <?php for ($i = 1; $i <= 10; $i++): ?>
+            .salary-card:nth-child(<?= $i ?>) {
+                animation-delay:
+                    <?= $i * 0.05 ?>
+                    s;
             }
 
-            .salary-card {
-                padding: 15px;
-            }
-
-            .salary-card-amount {
-                font-size: 1.3rem;
-            }
-
-            .store-badge {
-                font-size: 0.8rem;
-                padding: 5px 12px;
-            }
-
-            .salary-info-row {
-                font-size: 0.85rem;
-            }
-
-            .btn-action {
-                font-size: 0.85rem;
-                padding: 8px 12px;
-            }
-        }
-
-        /* Touch-friendly */
-        @media (hover: none) and (pointer: coarse) {
-            .btn-action, .btn-export, .back-link {
-                min-height: 44px;
-            }
-
-            .salary-card {
-                margin-bottom: 12px;
-            }
-        }
+        <?php endfor; ?>
     </style>
 </head>
 
 <body>
     <div class="container">
+
+        <!-- Header -->
         <div class="page-header">
-            <h2>あなたの給与記録</h2>
+            <a href="dashboard.php" class="back-btn">
+                <i class="fas fa-arrow-left"></i>
+            </a>
+            <h2 class="page-title"><?= $t['title'] ?></h2>
+            <a href="export_csv.php" class="export-btn">
+                <i class="fas fa-file-export"></i>
+            </a>
         </div>
 
-        <div class="filter-section">
-            <form method="get" class="d-flex justify-content-start align-items-center gap-3">
-                <label for="store" class="filter-label">
-                    <i class="fas fa-filter"></i> 店舗で絞り込む:
-                </label>
-                <select name="store" id="store" class="form-select w-auto" onchange="this.form.submit()">
-                    <option value="All" <?= $store_filter == 'All' ? 'selected' : '' ?>>すべての店舗</option>
+        <!-- Filter -->
+        <div class="filter-container">
+            <form method="get" id="filterForm">
+                <select name="store" class="filter-select" onchange="document.getElementById('filterForm').submit()">
+                    <option value="All"><?= $t['all_stores'] ?></option>
                     <?php foreach ($available_stores as $store): ?>
                         <option value="<?= htmlspecialchars($store) ?>" <?= $store_filter == $store ? 'selected' : '' ?>>
                             <?= htmlspecialchars($store) ?>
@@ -541,125 +421,72 @@ function getStoreColor($store) {
             </form>
         </div>
 
-        <!-- Desktop Table View -->
-        <div class="data-card desktop-table">
-            <div class="table-responsive">
-                <table class="table table-hover mb-0">
-                    <thead>
-                        <tr>
-                            <th>店舗</th>
-                            <th>金額</th>
-                            <th>受領日</th>
-                            <th>勤務月</th>
-                            <th>メモ</th>
-                            <th>アクション</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php if (count($salaries) > 0): ?>
-                            <?php foreach ($salaries as $salary): ?>
-                                <tr>
-                                    <td>
-                                        <span class="store-badge" style="background-color: <?= getStoreColor($salary['store_name']) ?>">
-                                            <i class="fas fa-store me-1"></i><?= htmlspecialchars($salary['store_name']) ?>
-                                        </span>
-                                    </td>
-                                    <td><i class="fas fa-yen-sign me-2"></i><?= number_format($salary['amount']) ?></td>
-                                    <td><i class="fas fa-calendar-check me-2"></i><?= htmlspecialchars($salary['received_date']) ?></td>
-                                    <td><i class="fas fa-calendar-alt me-2"></i><?= date('F Y', strtotime($salary['working_month'])) ?></td>
-                                    <td><?= nl2br(htmlspecialchars($salary['notes'])) ?></td>
-                                    <td>
-                                        <a href="edit_salary.php?id=<?= $salary['id'] ?>" class="btn btn-warning btn-action">
-                                            <i class="fas fa-edit"></i> 編集
-                                        </a>
-                                        <a href="delete_salary.php?id=<?= $salary['id'] ?>" class="btn btn-danger btn-action" onclick="return confirm('この記録を削除しますか？');">
-                                            <i class="fas fa-trash"></i> 削除
-                                        </a>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        <?php else: ?>
-                            <tr>
-                                <td colspan="6" class="text-center py-5">
-                                    <div class="empty-state">
-                                        <i class="fas fa-inbox"></i>
-                                        <div class="empty-state-text">給与記録が見つかりませんでした。</div>
-                                    </div>
-                                </td>
-                            </tr>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Mobile Card View -->
-        <div class="mobile-cards">
+        <!-- List -->
+        <div class="salary-list">
             <?php if (count($salaries) > 0): ?>
                 <?php foreach ($salaries as $salary): ?>
-                    <div class="salary-card" style="border-left-color: <?= getStoreColor($salary['store_name']) ?>">
-                        <div class="salary-card-header">
-                            <span class="store-badge" style="background-color: <?= getStoreColor($salary['store_name']) ?>">
-                                <i class="fas fa-store me-1"></i><?= htmlspecialchars($salary['store_name']) ?>
-                            </span>
-                            <div class="salary-card-amount">
+                    <?php $color = getStoreColor($salary['store_name']); ?>
+
+                    <div class="salary-card">
+                        <div class="card-left-border" style="background: <?= $color ?>;"></div>
+
+                        <div class="card-header-row">
+                            <div class="store-info">
+                                <div class="store-name" style="color: <?= $color ?>;">
+                                    <?= htmlspecialchars($salary['store_name']) ?></div>
+                                <div class="record-date">
+                                    <i class="far fa-calendar-check me-1"></i> <?= htmlspecialchars($salary['received_date']) ?>
+                                </div>
+                            </div>
+                            <div class="salary-amount">
                                 ¥<?= number_format($salary['amount']) ?>
                             </div>
                         </div>
-                        <div class="salary-card-body">
-                            <div class="salary-info-row">
-                                <i class="fas fa-calendar-check"></i>
-                                <span class="salary-info-label">受領日:</span>
-                                <span class="salary-info-value"><?= htmlspecialchars($salary['received_date']) ?></span>
-                            </div>
-                            <div class="salary-info-row">
-                                <i class="fas fa-calendar-alt"></i>
-                                <span class="salary-info-label">勤務月:</span>
-                                <span class="salary-info-value"><?= date('F Y', strtotime($salary['working_month'])) ?></span>
+
+                        <div class="card-details">
+                            <div class="detail-row">
+                                <div class="detail-label"><?= $t['month'] ?>:</div>
+                                <div><?= date('Y-m', strtotime($salary['working_month'])) ?></div>
                             </div>
                             <?php if (!empty($salary['notes'])): ?>
-                                <div class="salary-info-row">
-                                    <i class="fas fa-sticky-note"></i>
-                                    <span class="salary-info-label">メモ:</span>
-                                    <span class="salary-info-value"><?= nl2br(htmlspecialchars($salary['notes'])) ?></span>
+                                <div class="detail-row">
+                                    <div class="detail-label"><?= $t['notes'] ?>:</div>
+                                    <div><?= mb_strimwidth(htmlspecialchars($salary['notes']), 0, 30, "...") ?></div>
                                 </div>
                             <?php endif; ?>
                         </div>
-                        <div class="salary-card-actions">
-                            <a href="edit_salary.php?id=<?= $salary['id'] ?>" class="btn btn-warning btn-action">
-                                <i class="fas fa-edit"></i> 編集
+
+                        <div class="card-actions">
+                            <a href="edit_salary.php?id=<?= $salary['id'] ?>" class="action-chip chip-edit">
+                                <i class="fas fa-pen me-1"></i> <?= $t['edit'] ?>
                             </a>
-                            <a href="delete_salary.php?id=<?= $salary['id'] ?>" class="btn btn-danger btn-action" onclick="return confirm('この記録を削除しますか？');">
-                                <i class="fas fa-trash"></i> 削除
+                            <a href="delete_salary.php?id=<?= $salary['id'] ?>" class="action-chip chip-delete"
+                                onclick="return confirm('<?= $t['confirm_delete'] ?>');">
+                                <i class="fas fa-trash me-1"></i> <?= $t['delete'] ?>
                             </a>
                         </div>
                     </div>
                 <?php endforeach; ?>
             <?php else: ?>
-                <div class="data-card">
-                    <div class="empty-state">
-                        <i class="fas fa-inbox"></i>
-                        <div class="empty-state-text">給与記録が見つかりませんでした。</div>
-                    </div>
+                <div class="empty-state">
+                    <i class="fas fa-folder-open empty-icon"></i>
+                    <p><?= $t['empty_state'] ?></p>
                 </div>
             <?php endif; ?>
         </div>
 
-        <div class="d-flex justify-content-between align-items-center mt-4 flex-wrap gap-3">
-            <a href="dashboard.php" class="back-link">
-                <i class="fas fa-arrow-left"></i> ダッシュボードに戻る
-            </a>
-            <a href="export_csv.php" class="btn-export">
-                <i class="fas fa-file-export"></i> CSVとしてエクスポート
-            </a>
+        <!-- Bottom Spacing for Fixed Footer -->
+        <div style="height: 60px;"></div>
+
+        <!-- Sticky Total Footer -->
+        <div class="footer-total">
+            <span class="total-label"><?= $t['total_earned'] ?></span>
+            <span class="total-value">¥<?= number_format($total) ?></span>
         </div>
 
-        <div class="total-section">
-            <p class="total-label">総給与額:</p>
-            <p class="total-amount">¥<?= number_format($total) ?></p>
-        </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 </body>
+
 </html>

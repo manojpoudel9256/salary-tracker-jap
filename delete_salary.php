@@ -40,6 +40,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>給与記録を削除</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="icon" href="icon/salarytrackericon.png" type="image/png">
+    <link rel="apple-touch-icon" href="icon/apple-touch-icon.png">
 </head>
 
 <body>

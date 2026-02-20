@@ -3,375 +3,356 @@ include 'auth/protected.php';
 include 'config/db.php';
 
 $user_id = $_SESSION['user_id'];
+$lang = $_SESSION['lang'] ?? 'en';
 
-// Get total salary
+// Translations
+$trans = [
+    'en' => [
+        'title' => 'Remittance Charts',
+        'subtitle' => 'Visual breakdown of transfers',
+        'total_salary' => 'Total Salary',
+        'total_sent' => 'Total Sent',
+        'remaining' => 'Remaining',
+        'donut_title' => 'Salary Allocation',
+        'donut_section' => 'Salary vs Sent',
+        'donut_hint' => 'How much of your salary was sent',
+        'remaining_label' => 'Remaining',
+        'sent_label' => 'Sent',
+        'pie_section' => 'By Recipient',
+        'pie_title' => 'Sent by Recipient',
+        'pie_hint' => 'Breakdown by who received the money',
+        'other' => 'Other'
+    ],
+    'jp' => [
+        'title' => '送金チャート分析',
+        'subtitle' => '送金の視覚的な分析',
+        'total_salary' => '総給与',
+        'total_sent' => '総送金額',
+        'remaining' => '残高',
+        'donut_title' => '給与の使い道',
+        'donut_section' => '給与 vs 送金',
+        'donut_hint' => '給与のうちどれくらい送金したか',
+        'remaining_label' => '残高',
+        'sent_label' => '送金済',
+        'pie_section' => '受取人別',
+        'pie_title' => '受取人別送金額',
+        'pie_hint' => '誰にどれだけ送金したか',
+        'other' => 'その他'
+    ]
+];
+$t = $trans[$lang];
+
+// Get totals
 $stmt = $pdo->prepare("SELECT SUM(amount) as total FROM salaries WHERE user_id = ?");
 $stmt->execute([$user_id]);
 $total_salary = $stmt->fetch()['total'] ?? 0;
 
-// Get total sent
 $stmt = $pdo->prepare("SELECT SUM(amount) as total FROM remittances WHERE user_id = ?");
 $stmt->execute([$user_id]);
 $total_sent = $stmt->fetch()['total'] ?? 0;
 
 $remaining = $total_salary - $total_sent;
+$pct_sent = $total_salary > 0 ? round(($total_sent / $total_salary) * 100, 1) : 0;
 
-// Get breakdown by recipient
+// Recipient breakdown
 $stmt = $pdo->prepare("
     SELECT 
-        COALESCE(recipient, 'その他') as recipient,
+        COALESCE(NULLIF(recipient, ''), ?) as recipient,
         SUM(amount) as total
     FROM remittances 
     WHERE user_id = ?
     GROUP BY recipient
     ORDER BY total DESC
 ");
-$stmt->execute([$user_id]);
+$stmt->execute([$t['other'], $user_id]);
 $recipients_data = $stmt->fetchAll();
 
-// Prepare data for charts
 $recipient_labels = [];
 $recipient_amounts = [];
-$recipient_colors = [
-    '#f72585',
-    '#b5179e',
-    '#7209b7',
-    '#560bad',
-    '#480ca8',
-    '#3a0ca3',
-    '#3f37c9',
-    '#4361ee',
-    '#4895ef',
-    '#4cc9f0'
-];
+$neon_colors = ['#fa709a', '#4facfe', '#43e97b', '#ffd700', '#a18cd1', '#ff6b6b', '#38f9d7', '#f093fb', '#00c9ff', '#fbc2eb'];
 
-foreach ($recipients_data as $index => $data) {
+foreach ($recipients_data as $data) {
     $recipient_labels[] = $data['recipient'];
     $recipient_amounts[] = $data['total'];
 }
 ?>
+
 <!DOCTYPE html>
-<html lang="jp">
+<html lang="<?= $lang ?>">
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-    <title>送金チャート分析</title>
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title><?= $t['title'] ?> | Salary Tracker</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <link rel="icon" href="icon/salarytrackericon.png" type="image/png">
+    <link rel="apple-touch-icon" href="icon/apple-touch-icon.png">
+
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+        :root {
+            --bg-gradient-start: #0f0c29;
+            --bg-gradient-mid: #302b63;
+            --bg-gradient-end: #24243e;
+            --glass-bg: rgba(255, 255, 255, 0.08);
+            --glass-border: rgba(255, 255, 255, 0.12);
+            --glass-blur: blur(20px);
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.7);
+            --accent: #fa709a;
+            --safe-top: env(safe-area-inset-top);
+            --safe-bottom: env(safe-area-inset-bottom);
+        }
 
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Poppins', sans-serif;
+            -webkit-tap-highlight-color: transparent;
         }
 
         body {
-            background: linear-gradient(125deg, #4cc9f0, #4361ee, #7209b7, #f72585);
-            background-size: 300% 300%;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: linear-gradient(135deg, var(--bg-gradient-start), var(--bg-gradient-mid), var(--bg-gradient-end));
+            background-size: 400% 400%;
             animation: gradientBG 15s ease infinite;
             min-height: 100vh;
-            padding: 15px 10px;
+            color: var(--text-primary);
+            padding-top: calc(var(--safe-top) + 20px);
+            padding-bottom: calc(var(--safe-bottom) + 20px);
         }
 
         @keyframes gradientBG {
-
-            0%,
-            100% {
+            0% {
                 background-position: 0% 50%;
             }
 
             50% {
                 background-position: 100% 50%;
             }
+
+            100% {
+                background-position: 0% 50%;
+            }
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 600px;
             margin: 0 auto;
-            padding: 0;
+            padding: 0 20px;
         }
 
-        h2 {
-            color: white;
-            text-align: center;
-            font-weight: 700;
-            margin-bottom: 20px;
-            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-            font-size: 24px;
-            padding: 0 10px;
-        }
-
-        h2 i {
-            font-size: 22px;
-            margin-right: 8px;
-        }
-
-        .section-title {
-            color: white;
-            font-weight: 600;
-            margin: 25px 0 15px 0;
-            font-size: 18px;
-            text-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-            padding: 0 5px;
+        /* Header */
+        .page-header {
             display: flex;
             align-items: center;
-            gap: 10px;
+            margin-bottom: 20px;
+            animation: fadeInDown 0.5s ease-out;
+        }
+
+        .back-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-primary);
+            text-decoration: none;
+            backdrop-filter: var(--glass-blur);
+            margin-right: 16px;
+            flex-shrink: 0;
+        }
+
+        .header-text h1 {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 700;
+            font-size: 22px;
+            margin: 0;
+        }
+
+        .header-text p {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin: 0;
+        }
+
+        /* Stats */
+        .stats-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 16px;
+            animation: fadeInUp 0.4s ease-out 0.1s backwards;
+        }
+
+        .stat-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            backdrop-filter: var(--glass-blur);
+            border-radius: 12px;
+            padding: 12px 8px;
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 9px;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 700;
+            font-size: 15px;
+        }
+
+        .stat-1 .stat-value {
+            color: #4facfe;
+        }
+
+        .stat-2 .stat-value {
+            color: #fa709a;
+        }
+
+        .stat-3 .stat-value {
+            color: #43e97b;
+        }
+
+        /* Section Title */
+        .section-title {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 600;
+            font-size: 15px;
+            color: var(--text-secondary);
+            margin: 16px 0 10px 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .section-title i {
-            font-size: 20px;
+            color: var(--accent);
+            font-size: 14px;
         }
 
-        .card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            border: none;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-            margin-bottom: 20px;
-            overflow: hidden;
-        }
-
-        .card-body {
-            padding: 25px 20px;
+        /* Chart Card */
+        .chart-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            backdrop-filter: var(--glass-blur);
+            border-radius: 16px;
+            padding: 20px 16px;
+            margin-bottom: 16px;
         }
 
         .chart-wrapper {
             position: relative;
             width: 100%;
-            height: 350px;
-            margin: 0 auto;
+            height: 280px;
         }
 
-        .summary-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-
-        .summary-card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 15px;
-            padding: 20px 15px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+        .chart-hint {
             text-align: center;
-            transition: transform 0.2s;
-        }
-
-        .summary-card:active {
-            transform: scale(0.98);
-        }
-
-        .summary-card.salary {
-            background: linear-gradient(135deg, #4361ee, #3a0ca3);
-            color: white;
-        }
-
-        .summary-card.sent {
-            background: linear-gradient(135deg, #f72585, #b5179e);
-            color: white;
-        }
-
-        .summary-card.remaining {
-            background: linear-gradient(135deg, #06d6a0, #02c39a);
-            color: white;
-        }
-
-        .summary-icon {
-            font-size: 32px;
-            margin-bottom: 10px;
-            opacity: 0.9;
-        }
-
-        .summary-label {
             font-size: 11px;
-            opacity: 0.95;
-            margin-bottom: 8px;
-            font-weight: 500;
-            line-height: 1.3;
+            color: rgba(255, 255, 255, 0.35);
+            margin-top: 12px;
+            font-style: italic;
         }
 
-        .summary-value {
-            font-size: 22px;
-            font-weight: 700;
-            word-break: break-all;
+        .chart-hint i {
+            margin-right: 4px;
         }
 
+        /* Legend */
         .legend-list {
-            margin-top: 20px;
-            padding: 0;
             list-style: none;
+            padding: 0;
+            margin-top: 16px;
         }
 
         .legend-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 12px 15px;
-            margin-bottom: 8px;
-            background: #f8f9fa;
-            border-radius: 12px;
+            padding: 10px 12px;
+            margin-bottom: 6px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 10px;
             transition: all 0.2s;
         }
 
         .legend-item:active {
-            background: #e9ecef;
             transform: scale(0.98);
         }
 
         .legend-info {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
         }
 
         .legend-color {
-            width: 20px;
-            height: 20px;
-            border-radius: 6px;
+            width: 16px;
+            height: 16px;
+            border-radius: 5px;
             flex-shrink: 0;
         }
 
         .legend-name {
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 600;
-            color: #495057;
+        }
+
+        .legend-right {
+            text-align: right;
         }
 
         .legend-amount {
-            font-size: 14px;
+            font-family: 'Outfit', sans-serif;
             font-weight: 700;
-            color: #212529;
-        }
-
-        .legend-percentage {
-            font-size: 12px;
-            color: #6c757d;
-            margin-left: 5px;
-        }
-
-        .back-link {
-            color: white;
-            text-decoration: none;
-            font-weight: 600;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            padding: 14px 24px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 30px;
-            transition: all 0.3s;
-            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3);
             font-size: 14px;
-            min-height: 48px;
-            margin: 5px;
         }
 
-        .back-link:active {
-            transform: scale(0.98);
-            background: rgba(255, 255, 255, 0.3);
+        .legend-pct {
+            font-size: 10px;
+            color: var(--text-secondary);
         }
 
-        .back-link:hover {
-            background: rgba(255, 255, 255, 0.3);
-            color: white;
-        }
-
-        .bottom-nav {
-            display: flex;
-            justify-content: center;
-            margin-top: 20px;
-        }
-
-        .info-text {
-            text-align: center;
-            color: #6c757d;
-            font-size: 13px;
-            margin-top: 15px;
-            font-style: italic;
-        }
-
-        @media (min-width: 576px) {
-            h2 {
-                font-size: 28px;
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
             }
 
-            .section-title {
-                font-size: 20px;
-                margin: 30px 0 20px 0;
-            }
-
-            .summary-grid {
-                grid-template-columns: repeat(3, 1fr);
-                gap: 15px;
-            }
-
-            .summary-card {
-                padding: 24px 20px;
-            }
-
-            .summary-icon {
-                font-size: 36px;
-            }
-
-            .summary-label {
-                font-size: 12px;
-            }
-
-            .summary-value {
-                font-size: 26px;
-            }
-
-            .chart-wrapper {
-                height: 400px;
-            }
-
-            .card-body {
-                padding: 30px 25px;
+            to {
+                opacity: 1;
+                transform: translateY(0);
             }
         }
 
-        @media (min-width: 768px) {
-            body {
-                padding: 30px 20px;
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
             }
 
-            h2 {
-                font-size: 32px;
-                margin-bottom: 30px;
-            }
-
-            .section-title {
-                font-size: 22px;
-            }
-
-            .chart-wrapper {
-                height: 450px;
-            }
-
-            .back-link {
-                font-size: 15px;
-                padding: 15px 28px;
-            }
-
-            .charts-grid {
-                display: grid;
-                grid-template-columns: repeat(2, 1fr);
-                gap: 20px;
-            }
-        }
-
-        @media (min-width: 992px) {
-            .chart-wrapper {
-                height: 500px;
+            to {
+                opacity: 1;
+                transform: translateY(0);
             }
         }
     </style>
@@ -379,127 +360,88 @@ foreach ($recipients_data as $index => $data) {
 
 <body>
     <div class="container">
-        <h2><i class="fas fa-chart-pie"></i> 送金チャート分析</h2>
 
-        <!-- Summary Cards -->
-        <div class="summary-grid">
-            <div class="summary-card salary">
-                <i class="fas fa-wallet summary-icon"></i>
-                <div class="summary-label">総給与<br>Total Salary</div>
-                <div class="summary-value">¥
-                    <?= number_format($total_salary) ?>
-                </div>
-            </div>
-
-            <div class="summary-card sent">
-                <i class="fas fa-paper-plane summary-icon"></i>
-                <div class="summary-label">総送金額<br>Total Sent</div>
-                <div class="summary-value">¥
-                    <?= number_format($total_sent) ?>
-                </div>
-            </div>
-
-            <div class="summary-card remaining">
-                <i class="fas fa-piggy-bank summary-icon"></i>
-                <div class="summary-label">残高<br>Remaining</div>
-                <div class="summary-value">¥
-                    <?= number_format($remaining) ?>
-                </div>
+        <!-- Header -->
+        <div class="page-header">
+            <a href="remittance.php" class="back-btn"><i class="fas fa-arrow-left"></i></a>
+            <div class="header-text">
+                <h1><i class="fas fa-chart-pie me-2"></i><?= $t['title'] ?></h1>
+                <p><?= $t['subtitle'] ?></p>
             </div>
         </div>
 
-        <div class="charts-grid">
-            <!-- Donut Chart: Salary vs Sent -->
-            <div>
-                <h4 class="section-title">
-                    <i class="fas fa-chart-pie"></i>
-                    給与 vs 送金 (Salary vs Sent)
-                </h4>
-                <div class="card">
-                    <div class="card-body">
-                        <div class="chart-wrapper">
-                            <canvas id="donutChart"></canvas>
+        <!-- Stats -->
+        <div class="stats-row">
+            <div class="stat-card stat-1">
+                <div class="stat-label"><i class="fas fa-wallet"></i> <?= $t['total_salary'] ?></div>
+                <div class="stat-value">¥<?= number_format($total_salary) ?></div>
+            </div>
+            <div class="stat-card stat-2">
+                <div class="stat-label"><i class="fas fa-paper-plane"></i> <?= $t['total_sent'] ?></div>
+                <div class="stat-value">¥<?= number_format($total_sent) ?></div>
+            </div>
+            <div class="stat-card stat-3">
+                <div class="stat-label"><i class="fas fa-piggy-bank"></i> <?= $t['remaining'] ?></div>
+                <div class="stat-value">¥<?= number_format($remaining) ?></div>
+            </div>
+        </div>
+
+        <!-- Donut: Salary vs Sent -->
+        <div class="section-title"><i class="fas fa-chart-pie"></i> <?= $t['donut_section'] ?></div>
+        <div class="chart-card" style="animation: fadeInUp 0.4s ease-out 0.2s backwards;">
+            <div class="chart-wrapper">
+                <canvas id="donutChart"></canvas>
+            </div>
+            <div class="chart-hint">
+                <i class="fas fa-info-circle"></i> <?= $t['donut_hint'] ?>
+            </div>
+        </div>
+
+        <!-- Pie: By Recipient -->
+        <div class="section-title"><i class="fas fa-users"></i> <?= $t['pie_section'] ?></div>
+        <div class="chart-card" style="animation: fadeInUp 0.4s ease-out 0.3s backwards;">
+            <div class="chart-wrapper">
+                <canvas id="pieChart"></canvas>
+            </div>
+
+            <!-- Legend -->
+            <ul class="legend-list">
+                <?php foreach ($recipients_data as $index => $data): ?>
+                    <?php $pct = $total_sent > 0 ? round(($data['total'] / $total_sent) * 100, 1) : 0; ?>
+                    <li class="legend-item">
+                        <div class="legend-info">
+                            <div class="legend-color" style="background:<?= $neon_colors[$index % count($neon_colors)] ?>;">
+                            </div>
+                            <span class="legend-name"><?= htmlspecialchars($data['recipient']) ?></span>
                         </div>
-                        <p class="info-text">
-                            <i class="fas fa-info-circle"></i>
-                            給与のうち、どれくらい送金したか
-                        </p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Pie Chart: By Recipient -->
-            <div>
-                <h4 class="section-title">
-                    <i class="fas fa-users"></i>
-                    受取人別 (By Recipient)
-                </h4>
-                <div class="card">
-                    <div class="card-body">
-                        <div class="chart-wrapper">
-                            <canvas id="pieChart"></canvas>
+                        <div class="legend-right">
+                            <div class="legend-amount">¥<?= number_format($data['total']) ?></div>
+                            <div class="legend-pct"><?= $pct ?>%</div>
                         </div>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
 
-                        <!-- Legend List -->
-                        <ul class="legend-list">
-                            <?php foreach ($recipients_data as $index => $data): ?>
-                                <?php
-                                $percentage = $total_sent > 0 ? round(($data['total'] / $total_sent) * 100, 1) : 0;
-                                ?>
-                                <li class="legend-item">
-                                    <div class="legend-info">
-                                        <div class="legend-color"
-                                            style="background-color: <?= $recipient_colors[$index % count($recipient_colors)] ?>;">
-                                        </div>
-                                        <span class="legend-name">
-                                            <?= htmlspecialchars($data['recipient']) ?>
-                                        </span>
-                                    </div>
-                                    <div>
-                                        <span class="legend-amount">¥
-                                            <?= number_format($data['total']) ?>
-                                        </span>
-                                        <span class="legend-percentage">(
-                                            <?= $percentage ?>%)
-                                        </span>
-                                    </div>
-                                </li>
-                            <?php endforeach; ?>
-                        </ul>
-
-                        <p class="info-text">
-                            <i class="fas fa-info-circle"></i>
-                            誰にどれだけ送金したか
-                        </p>
-                    </div>
-                </div>
+            <div class="chart-hint">
+                <i class="fas fa-info-circle"></i> <?= $t['pie_hint'] ?>
             </div>
         </div>
 
-        <div class="bottom-nav">
-            <a href="remittance.php" class="back-link">
-                <i class="fas fa-arrow-left"></i> ダッシュボードに戻る
-            </a>
-        </div>
     </div>
 
     <script>
-        const isMobile = window.innerWidth < 768;
+        const mobile = window.innerWidth < 768;
 
-        // Donut Chart: Salary vs Sent
-        const donutCtx = document.getElementById('donutChart').getContext('2d');
-        new Chart(donutCtx, {
+        // Donut Chart
+        new Chart(document.getElementById('donutChart').getContext('2d'), {
             type: 'doughnut',
             data: {
-                labels: ['残高 (Remaining)', '送金済 (Sent)'],
+                labels: ['<?= $t['remaining_label'] ?>', '<?= $t['sent_label'] ?>'],
                 datasets: [{
-                    data: [<?= $remaining ?>, <?= $total_sent ?>],
-                    backgroundColor: [
-                        '#06d6a0',
-                        '#f72585'
-                    ],
-                    borderWidth: 3,
-                    borderColor: '#fff'
+                    data: [<?= max(0, $remaining) ?>, <?= $total_sent ?>],
+                    backgroundColor: ['#43e97b', '#fa709a'],
+                    borderWidth: 2,
+                    borderColor: 'rgba(15, 12, 41, 0.8)'
                 }]
             },
             options: {
@@ -508,39 +450,29 @@ foreach ($recipients_data as $index => $data) {
                 plugins: {
                     title: {
                         display: true,
-                        text: '給与の使い道',
-                        font: {
-                            size: isMobile ? 16 : 18,
-                            weight: 'bold'
-                        },
-                        padding: {
-                            top: isMobile ? 10 : 15,
-                            bottom: isMobile ? 15 : 20
-                        }
+                        text: '<?= $t['donut_title'] ?>',
+                        color: '#ffffff',
+                        font: { size: mobile ? 14 : 16, weight: 'bold', family: 'Outfit' },
+                        padding: { top: 0, bottom: 10 }
                     },
                     legend: {
-                        display: true,
-                        position: isMobile ? 'bottom' : 'bottom',
+                        position: 'bottom',
                         labels: {
-                            font: { size: isMobile ? 12 : 14 },
-                            padding: isMobile ? 12 : 20,
-                            boxWidth: isMobile ? 15 : 20,
+                            color: 'rgba(255,255,255,0.7)',
+                            font: { size: 12 },
+                            padding: 14,
+                            boxWidth: 14,
                             usePointStyle: true
                         }
                     },
                     tooltip: {
-                        enabled: true,
-                        backgroundColor: 'rgba(0,0,0,0.8)',
-                        padding: isMobile ? 12 : 15,
-                        titleFont: { size: isMobile ? 13 : 15 },
-                        bodyFont: { size: isMobile ? 12 : 14 },
+                        backgroundColor: 'rgba(0,0,0,0.85)',
+                        padding: 10,
                         callbacks: {
-                            label: function (context) {
-                                const label = context.label || '';
-                                const value = context.parsed;
-                                const total = <?= $total_salary ?>;
-                                const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-                                return label + ': ¥' + value.toLocaleString() + ' (' + percentage + '%)';
+                            label: ctx => {
+                                const total = <?= $total_salary > 0 ? $total_salary : 1 ?>;
+                                const pct = ((ctx.parsed / total) * 100).toFixed(1);
+                                return ctx.label + ': ¥' + ctx.parsed.toLocaleString() + ' (' + pct + '%)';
                             }
                         }
                     }
@@ -549,17 +481,16 @@ foreach ($recipients_data as $index => $data) {
             }
         });
 
-        // Pie Chart: By Recipient
-        const pieCtx = document.getElementById('pieChart').getContext('2d');
-        new Chart(pieCtx, {
+        // Pie Chart
+        new Chart(document.getElementById('pieChart').getContext('2d'), {
             type: 'pie',
             data: {
                 labels: <?= json_encode($recipient_labels) ?>,
                 datasets: [{
                     data: <?= json_encode($recipient_amounts) ?>,
-                    backgroundColor: <?= json_encode(array_slice($recipient_colors, 0, count($recipient_labels))) ?>,
-                    borderWidth: 3,
-                    borderColor: '#fff'
+                    backgroundColor: <?= json_encode(array_slice($neon_colors, 0, count($recipient_labels))) ?>,
+                    borderWidth: 2,
+                    borderColor: 'rgba(15, 12, 41, 0.8)'
                 }]
             },
             options: {
@@ -568,39 +499,22 @@ foreach ($recipients_data as $index => $data) {
                 plugins: {
                     title: {
                         display: true,
-                        text: '受取人別送金額',
-                        font: {
-                            size: isMobile ? 16 : 18,
-                            weight: 'bold'
-                        },
-                        padding: {
-                            top: isMobile ? 10 : 15,
-                            bottom: isMobile ? 15 : 20
-                        }
+                        text: '<?= $t['pie_title'] ?>',
+                        color: '#ffffff',
+                        font: { size: mobile ? 14 : 16, weight: 'bold', family: 'Outfit' },
+                        padding: { top: 0, bottom: 10 }
                     },
                     legend: {
-                        display: isMobile ? false : true,
-                        position: 'bottom',
-                        labels: {
-                            font: { size: 13 },
-                            padding: 15,
-                            boxWidth: 15,
-                            usePointStyle: true
-                        }
+                        display: false
                     },
                     tooltip: {
-                        enabled: true,
-                        backgroundColor: 'rgba(0,0,0,0.8)',
-                        padding: isMobile ? 12 : 15,
-                        titleFont: { size: isMobile ? 13 : 15 },
-                        bodyFont: { size: isMobile ? 12 : 14 },
+                        backgroundColor: 'rgba(0,0,0,0.85)',
+                        padding: 10,
                         callbacks: {
-                            label: function (context) {
-                                const label = context.label || '';
-                                const value = context.parsed;
-                                const total = <?= $total_sent ?>;
-                                const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-                                return label + ': ¥' + value.toLocaleString() + ' (' + percentage + '%)';
+                            label: ctx => {
+                                const total = <?= $total_sent > 0 ? $total_sent : 1 ?>;
+                                const pct = ((ctx.parsed / total) * 100).toFixed(1);
+                                return ctx.label + ': ¥' + ctx.parsed.toLocaleString() + ' (' + pct + '%)';
                             }
                         }
                     }

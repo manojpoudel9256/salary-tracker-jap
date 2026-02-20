@@ -3,6 +3,70 @@ include 'auth/protected.php';
 include 'config/db.php';
 
 $user_id = $_SESSION['user_id'];
+$lang = $_SESSION['lang'] ?? 'en';
+
+// Translations
+$trans = [
+    'en' => [
+        'title' => 'Salary Analysis',
+        'subtitle' => 'Visualize your salary data with multiple chart types',
+        'stores' => 'Stores',
+        'months_recorded' => 'Months',
+        'total_income' => 'Total Income',
+        'avg_monthly' => 'Monthly Avg',
+        'select_chart' => 'Chart Type',
+        'bar' => 'Bar',
+        'line' => 'Line',
+        'radar' => 'Radar',
+        'pie' => 'Pie',
+        'bar_desc' => 'Compare salary by store across months',
+        'line_desc' => 'Track salary trends over time',
+        'radar_desc' => 'Multi-dimensional store comparison (Total, Avg, Active Months)',
+        'pie_desc' => 'See income distribution by store',
+        'bar_title' => 'Monthly Salary by Store',
+        'line_title' => 'Salary Trend Over Time',
+        'radar_title' => 'Store Performance Comparison',
+        'pie_title' => 'Income Share by Store',
+        'amount_label' => 'Amount (¥)',
+        'month_label' => 'Month',
+        'total_label' => 'Total Income',
+        'avg_label' => 'Avg Monthly',
+        'active_months' => 'Active Months',
+        'no_data' => 'No salary data yet',
+        'no_data_sub' => 'Add salary records to see charts!',
+        'back' => 'Dashboard'
+    ],
+    'jp' => [
+        'title' => '給与分析',
+        'subtitle' => '複数のチャートで給与データを視覚化',
+        'stores' => '店舗数',
+        'months_recorded' => '記録月数',
+        'total_income' => '総収入',
+        'avg_monthly' => '月平均',
+        'select_chart' => 'チャートタイプ',
+        'bar' => '棒グラフ',
+        'line' => '折れ線',
+        'radar' => 'レーダー',
+        'pie' => '円グラフ',
+        'bar_desc' => '各月における店舗ごとの給与を比較',
+        'line_desc' => '時系列での給与トレンドを確認',
+        'radar_desc' => '店舗パフォーマンスを多角的に比較（総収入・平均月収・稼働月数）',
+        'pie_desc' => '店舗別の総収入の割合を表示',
+        'bar_title' => '店舗別の月別給与比較',
+        'line_title' => '月別給与トレンド',
+        'radar_title' => '店舗パフォーマンス比較',
+        'pie_title' => '店舗別総収入の割合',
+        'amount_label' => '金額（¥）',
+        'month_label' => '月',
+        'total_label' => '総収入',
+        'avg_label' => '平均月収',
+        'active_months' => '稼働月数',
+        'no_data' => 'まだ給与データがありません',
+        'no_data_sub' => '給与を追加してグラフを表示しましょう！',
+        'back' => 'ダッシュボード'
+    ]
+];
+$t = $trans[$lang];
 
 $stmt = $pdo->prepare("
     SELECT 
@@ -24,7 +88,6 @@ $all_stores = array_unique(array_column($data, 'store_name'));
 $months = [];
 $store_data = [];
 
-// Initialize store_data array for all stores
 foreach ($all_stores as $store) {
     $store_data[$store] = [];
 }
@@ -41,7 +104,6 @@ foreach ($data as $row) {
     $store_data[$store][$month] = $amount;
 }
 
-// Fill empty months with 0 for all stores
 foreach ($store_data as $store => $values) {
     foreach ($months as $month) {
         if (!isset($store_data[$store][$month])) {
@@ -51,47 +113,40 @@ foreach ($store_data as $store => $values) {
     ksort($store_data[$store]);
 }
 
-// Calculate totals for each store (for radar chart)
 $store_totals = [];
 foreach ($store_data as $store => $values) {
     $store_totals[$store] = array_sum($values);
 }
 
-// Calculate average per month for each store (for radar chart)
 $store_averages = [];
 foreach ($store_data as $store => $values) {
     $non_zero_values = array_filter($values);
     $store_averages[$store] = count($non_zero_values) > 0 ? array_sum($non_zero_values) / count($non_zero_values) : 0;
 }
 
-// Generate vibrant colors for each store
+// Premium colors
 $colors = [
-    'rgba(54, 162, 235, 0.6)',
-    'rgba(255, 206, 86, 0.6)',
-    'rgba(75, 192, 192, 0.6)',
-    'rgba(153, 102, 255, 0.6)',
-    'rgba(255, 99, 132, 0.6)',
-    'rgba(255, 159, 64, 0.6)',
-    'rgba(46, 204, 113, 0.6)',
-    'rgba(52, 152, 219, 0.6)',
-    'rgba(155, 89, 182, 0.6)',
-    'rgba(241, 196, 15, 0.6)'
+    'rgba(79, 172, 254, 0.6)',
+    'rgba(0, 242, 254, 0.6)',
+    'rgba(67, 233, 123, 0.6)',
+    'rgba(250, 112, 154, 0.6)',
+    'rgba(254, 225, 64, 0.6)',
+    'rgba(161, 140, 209, 0.6)',
+    'rgba(251, 194, 235, 0.6)',
+    'rgba(143, 211, 244, 0.6)'
 ];
 
 $borderColors = [
-    'rgba(54, 162, 235, 1)',
-    'rgba(255, 206, 86, 1)',
-    'rgba(75, 192, 192, 1)',
-    'rgba(153, 102, 255, 1)',
-    'rgba(255, 99, 132, 1)',
-    'rgba(255, 159, 64, 1)',
-    'rgba(46, 204, 113, 1)',
-    'rgba(52, 152, 219, 1)',
-    'rgba(155, 89, 182, 1)',
-    'rgba(241, 196, 15, 1)'
+    'rgba(79, 172, 254, 1)',
+    'rgba(0, 242, 254, 1)',
+    'rgba(67, 233, 123, 1)',
+    'rgba(250, 112, 154, 1)',
+    'rgba(254, 225, 64, 1)',
+    'rgba(161, 140, 209, 1)',
+    'rgba(251, 194, 235, 1)',
+    'rgba(143, 211, 244, 1)'
 ];
 
-// Prepare datasets for bar chart
 $datasets = [];
 $color_index = 0;
 foreach ($store_data as $store => $values) {
@@ -105,7 +160,6 @@ foreach ($store_data as $store => $values) {
     $color_index++;
 }
 
-// Prepare data for radar chart (store performance comparison)
 $radarDatasets = [];
 $color_index = 0;
 foreach ($store_averages as $store => $avg) {
@@ -125,34 +179,69 @@ foreach ($store_averages as $store => $avg) {
 ?>
 
 <!DOCTYPE html>
-<html lang="jp">
+<html lang="<?= $lang ?>">
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>給与チャート分析</title>
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title><?= $t['title'] ?> | Salary Tracker</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <!-- Libraries -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- App Icons -->
+    <link rel="icon" href="icon/salarytrackericon.png" type="image/png">
+    <link rel="apple-touch-icon" href="icon/apple-touch-icon.png">
+
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+        :root {
+            --bg-gradient-start: #0f0c29;
+            --bg-gradient-mid: #302b63;
+            --bg-gradient-end: #24243e;
+
+            --glass-bg: rgba(255, 255, 255, 0.08);
+            --glass-border: rgba(255, 255, 255, 0.12);
+            --glass-blur: blur(20px);
+
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.7);
+
+            --accent-primary: #4facfe;
+            --accent-glow: rgba(79, 172, 254, 0.4);
+
+            --safe-top: env(safe-area-inset-top);
+            --safe-bottom: env(safe-area-inset-bottom);
+        }
 
         * {
-            font-family: 'Poppins', sans-serif;
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
         }
 
         body {
-            background: linear-gradient(125deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #4facfe 75%, #00f2fe 100%);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: linear-gradient(135deg, var(--bg-gradient-start), var(--bg-gradient-mid), var(--bg-gradient-end));
             background-size: 400% 400%;
-            animation: gradientShift 20s ease infinite;
+            animation: gradientBG 15s ease infinite;
             min-height: 100vh;
-            padding: 20px;
+            color: var(--text-primary);
+            padding-top: calc(var(--safe-top) + 20px);
+            padding-bottom: calc(var(--safe-bottom) + 20px);
         }
 
-        @keyframes gradientShift {
+        @keyframes gradientBG {
             0% {
                 background-position: 0% 50%;
             }
@@ -167,156 +256,164 @@ foreach ($store_averages as $store => $avg) {
         }
 
         .container {
-            max-width: 1400px;
-            margin-top: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 0 20px;
         }
 
+        /* Header */
         .page-header {
-            text-align: center;
-            margin-bottom: 30px;
-            animation: fadeInDown 0.8s ease-out;
+            display: flex;
+            align-items: center;
+            margin-bottom: 24px;
+            animation: fadeInDown 0.5s ease-out;
         }
 
-        .page-title {
-            color: white;
+        .back-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-primary);
+            text-decoration: none;
+            backdrop-filter: var(--glass-blur);
+            margin-right: 16px;
+            flex-shrink: 0;
+        }
+
+        .header-text h1 {
+            font-family: 'Outfit', sans-serif;
             font-weight: 700;
-            font-size: 2.2rem;
-            margin-bottom: 10px;
-            text-shadow: 0px 3px 15px rgba(0, 0, 0, 0.3);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 15px;
+            font-size: 22px;
+            margin: 0;
         }
 
-        .page-title i {
-            font-size: 2rem;
-            animation: rotate 3s ease-in-out infinite;
+        .header-text p {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin: 0;
         }
 
-        @keyframes rotate {
-
-            0%,
-            100% {
-                transform: rotate(0deg);
-            }
-
-            50% {
-                transform: rotate(180deg);
-            }
-        }
-
-        .page-subtitle {
-            color: rgba(255, 255, 255, 0.9);
-            font-size: 1rem;
-            font-weight: 400;
-        }
-
-        @keyframes fadeInDown {
-            from {
-                opacity: 0;
-                transform: translateY(-30px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .chart-selector {
-            background: rgba(255, 255, 255, 0.98);
-            backdrop-filter: blur(20px);
-            border-radius: 24px;
-            padding: 25px;
-            margin-bottom: 25px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-        }
-
-        .selector-label {
-            font-weight: 600;
-            color: #2c3e50;
-            margin-bottom: 15px;
-            font-size: 1.1rem;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .selector-label i {
-            color: #667eea;
-        }
-
-        .chart-type-buttons {
-            display: flex;
-            flex-wrap: wrap;
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
             gap: 12px;
-            justify-content: center;
+            margin-bottom: 24px;
+            animation: fadeInUp 0.5s ease-out 0.1s backwards;
         }
 
-        .chart-type-btn {
-            padding: 14px 28px;
-            border: 2px solid #e0e0e0;
-            background: white;
-            color: #555;
-            border-radius: 50px;
+        .stat-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            backdrop-filter: var(--glass-blur);
+            border-radius: 16px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 700;
+            font-size: 20px;
+        }
+
+        .stat-accent-1 .stat-value {
+            color: #4facfe;
+        }
+
+        .stat-accent-2 .stat-value {
+            color: #00f2fe;
+        }
+
+        .stat-accent-3 .stat-value {
+            color: #43e97b;
+        }
+
+        .stat-accent-4 .stat-value {
+            color: #fa709a;
+        }
+
+        /* Chart Type Selector */
+        .chart-selector {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+            -webkit-overflow-scrolling: touch;
+            animation: fadeInUp 0.5s ease-out 0.2s backwards;
+        }
+
+        .chart-selector::-webkit-scrollbar {
+            display: none;
+        }
+
+        .chart-tab {
+            flex-shrink: 0;
+            padding: 10px 18px;
+            border-radius: 12px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            color: var(--text-secondary);
+            font-size: 13px;
             font-weight: 600;
-            font-size: 1rem;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.3s;
             display: flex;
             align-items: center;
-            gap: 10px;
-            min-width: 140px;
-            justify-content: center;
+            gap: 6px;
+            white-space: nowrap;
         }
 
-        .chart-type-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-            border-color: #667eea;
-            color: #667eea;
+        .chart-tab.active {
+            background: rgba(79, 172, 254, 0.2);
+            border-color: rgba(79, 172, 254, 0.4);
+            color: #4facfe;
         }
 
-        .chart-type-btn.active {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-color: #667eea;
-            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        .chart-tab:active {
+            transform: scale(0.95);
         }
 
-        .chart-type-btn i {
-            font-size: 1.2rem;
-        }
-
+        /* Chart Card */
         .chart-card {
-            background: rgba(255, 255, 255, 0.98);
-            backdrop-filter: blur(20px);
-            border-radius: 24px;
-            padding: 25px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            animation: cardEntrance 0.8s ease-out;
-            margin-bottom: 25px;
-            border: 1px solid rgba(255, 255, 255, 0.3);
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            backdrop-filter: var(--glass-blur);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 24px;
+            animation: fadeInUp 0.5s ease-out 0.3s backwards;
         }
 
-        @keyframes cardEntrance {
-            from {
-                opacity: 0;
-                transform: translateY(40px) scale(0.95);
-            }
+        .chart-desc {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
 
-            to {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
+        .chart-desc i {
+            color: var(--accent-primary);
         }
 
         .chart-wrapper {
             position: relative;
             width: 100%;
-            height: 500px;
+            height: 300px;
             display: none;
         }
 
@@ -327,354 +424,53 @@ foreach ($store_averages as $store => $avg) {
         .chart-container {
             position: relative;
             width: 100%;
-            height: calc(100% - 60px);
-            margin-top: 10px;
+            height: 100%;
         }
 
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 15px;
-            margin-bottom: 25px;
-        }
-
-        .stat-box {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 22px;
-            border-radius: 18px;
-            color: white;
+        /* Empty State */
+        .empty-state {
             text-align: center;
-            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
-            transition: transform 0.3s ease;
-            position: relative;
-            overflow: hidden;
+            padding: 40px 20px;
+            color: var(--text-secondary);
         }
 
-        .stat-box::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: linear-gradient(transparent, rgba(255, 255, 255, 0.1), transparent);
-            transform: rotate(45deg);
-            animation: shine 3s infinite linear;
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
         }
 
-        @keyframes shine {
-            0% {
-                left: -150%;
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
             }
 
-            100% {
-                left: 150%;
-            }
-        }
-
-        .stat-box:hover {
-            transform: translateY(-8px) scale(1.02);
-        }
-
-        .stat-label {
-            font-size: 0.9rem;
-            opacity: 0.95;
-            margin-bottom: 10px;
-            font-weight: 500;
-            position: relative;
-        }
-
-        .stat-value {
-            font-size: 2rem;
-            font-weight: 700;
-            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-            position: relative;
-        }
-
-        .back-link {
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-            color: white;
-            text-decoration: none;
-            font-weight: 600;
-            padding: 14px 28px;
-            background: rgba(255, 255, 255, 0.25);
-            backdrop-filter: blur(10px);
-            border-radius: 50px;
-            transition: all 0.3s ease;
-            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3);
-            border: 2px solid rgba(255, 255, 255, 0.4);
-            font-size: 1rem;
-        }
-
-        .back-link:hover {
-            transform: translateX(-8px) scale(1.05);
-            background: rgba(255, 255, 255, 0.35);
-            color: white;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
-        }
-
-        .back-link i {
-            transition: transform 0.3s ease;
-        }
-
-        .back-link:hover i {
-            transform: translateX(-4px);
-        }
-
-        .no-data {
-            text-align: center;
-            padding: 80px 20px;
-            color: #6c757d;
-        }
-
-        .no-data i {
-            font-size: 64px;
-            margin-bottom: 20px;
-            display: block;
-            color: #adb5bd;
-            animation: float 3s ease-in-out infinite;
-        }
-
-        @keyframes float {
-
-            0%,
-            100% {
+            to {
+                opacity: 1;
                 transform: translateY(0);
             }
+        }
 
-            50% {
-                transform: translateY(-15px);
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
             }
         }
 
-        .no-data-text {
-            font-size: 1.2rem;
-            font-weight: 500;
-            margin-bottom: 10px;
-        }
-
-        .no-data-subtext {
-            font-size: 1rem;
-            color: #868e96;
-        }
-
-        .chart-description {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            color: white;
-            padding: 15px 20px;
-            border-radius: 12px;
-            margin-bottom: 20px;
-            font-size: 0.95rem;
-            box-shadow: 0 5px 15px rgba(240, 147, 251, 0.3);
-        }
-
-        .chart-description i {
-            margin-right: 8px;
-        }
-
-        @media (max-width: 768px) {
-            body {
-                padding: 12px;
-            }
-
-            .container {
-                margin-top: 10px;
-                padding: 0 5px;
-            }
-
-            .page-header {
-                margin-bottom: 20px;
-            }
-
-            .page-title {
-                font-size: 1.5rem;
-                flex-direction: column;
-                gap: 8px;
-            }
-
-            .page-title i {
-                font-size: 1.5rem;
-            }
-
-            .page-subtitle {
-                font-size: 0.85rem;
-            }
-
-            .chart-selector {
-                padding: 18px;
-                border-radius: 18px;
-                margin-bottom: 20px;
-            }
-
-            .selector-label {
-                font-size: 0.95rem;
-                margin-bottom: 12px;
-                justify-content: center;
-            }
-
-            .chart-type-buttons {
-                gap: 10px;
-            }
-
-            .chart-type-btn {
-                padding: 11px 20px;
-                font-size: 0.85rem;
-                min-width: 110px;
-                flex: 1 1 calc(50% - 5px);
-                max-width: calc(50% - 5px);
-            }
-
-            .chart-type-btn i {
-                font-size: 1rem;
-            }
-
-            .chart-card {
-                padding: 18px;
-                border-radius: 18px;
-                margin-bottom: 20px;
-            }
-
+        @media (max-width: 400px) {
             .chart-wrapper {
-                height: 350px;
-            }
-
-            .chart-container {
-                height: calc(100% - 50px);
-            }
-
-            .stats-grid {
-                grid-template-columns: 1fr;
-                gap: 12px;
-                margin-bottom: 20px;
-            }
-
-            .stat-box {
-                padding: 16px;
-                border-radius: 14px;
-            }
-
-            .stat-label {
-                font-size: 0.8rem;
-                margin-bottom: 8px;
+                height: 260px;
             }
 
             .stat-value {
-                font-size: 1.5rem;
-            }
-
-            .chart-description {
-                font-size: 0.85rem;
-                padding: 12px 16px;
-            }
-
-            .back-link {
-                padding: 12px 22px;
-                font-size: 0.9rem;
-                gap: 8px;
-            }
-
-            .no-data {
-                padding: 50px 15px;
-            }
-
-            .no-data i {
-                font-size: 48px;
-            }
-
-            .no-data-text {
-                font-size: 1rem;
-            }
-
-            .no-data-subtext {
-                font-size: 0.9rem;
-            }
-        }
-
-        @media (max-width: 576px) {
-            body {
-                padding: 10px;
-            }
-
-            .page-title {
-                font-size: 1.3rem;
-            }
-
-            .page-subtitle {
-                font-size: 0.8rem;
-            }
-
-            .chart-selector {
-                padding: 15px;
-            }
-
-            .chart-type-btn {
-                padding: 10px 16px;
-                font-size: 0.8rem;
-                min-width: 100px;
-            }
-
-            .chart-card {
-                padding: 50px;
-                border-radius: 18px;
-                margin-bottom: 20px;
-            }
-
-            .chart-wrapper {
-                height: 320px;
-            }
-
-            .chart-container {
-                height: calc(100% - 50px);
-            }
-
-            .stat-box {
-                padding: 14px;
-            }
-
-            .stat-value {
-                font-size: 1.4rem;
-            }
-
-            .back-link {
-                padding: 10px 18px;
-                font-size: 0.85rem;
-            }
-        }
-
-        @media (max-width: 768px) and (orientation: landscape) {
-            .chart-wrapper {
-                height: 300px;
-            }
-
-            .page-title {
-                font-size: 1.3rem;
-            }
-
-            .stats-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-            .chart-type-btn {
-                flex: 1 1 auto;
-                max-width: none;
-            }
-        }
-
-        @media (hover: none) and (pointer: coarse) {
-
-            .back-link,
-            .chart-type-btn {
-                min-height: 44px;
-            }
-
-            .back-link:active {
-                transform: translateX(-5px) scale(0.97);
-            }
-
-            .chart-type-btn:active {
-                transform: scale(0.95);
+                font-size: 17px;
             }
         }
     </style>
@@ -682,65 +478,62 @@ foreach ($store_averages as $store => $avg) {
 
 <body>
     <div class="container">
+
+        <!-- Header -->
         <div class="page-header">
-            <h1 class="page-title">
-                <i class="fas fa-chart-pie"></i>
-                給与チャート分析
-            </h1>
-            <p class="page-subtitle">複数のチャートタイプで給与データを視覚化</p>
+            <a href="dashboard.php" class="back-btn">
+                <i class="fas fa-arrow-left"></i>
+            </a>
+            <div class="header-text">
+                <h1><?= $t['title'] ?></h1>
+                <p><?= $t['subtitle'] ?></p>
+            </div>
         </div>
 
         <?php if (count($data) > 0): ?>
+
+            <!-- Stats -->
             <div class="stats-grid">
-                <div class="stat-box">
-                    <div class="stat-label"><i class="fas fa-store"></i> 登録店舗数</div>
+                <div class="stat-card stat-accent-1">
+                    <div class="stat-label"><i class="fas fa-store me-1"></i> <?= $t['stores'] ?></div>
                     <div class="stat-value"><?= count($all_stores) ?></div>
                 </div>
-                <div class="stat-box" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
-                    <div class="stat-label"><i class="fas fa-calendar-check"></i> 総記録月数</div>
+                <div class="stat-card stat-accent-2">
+                    <div class="stat-label"><i class="fas fa-calendar me-1"></i> <?= $t['months_recorded'] ?></div>
                     <div class="stat-value"><?= count($months) ?></div>
                 </div>
-                <div class="stat-box" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
-                    <div class="stat-label"><i class="fas fa-yen-sign"></i> 総収入</div>
+                <div class="stat-card stat-accent-3">
+                    <div class="stat-label"><i class="fas fa-yen-sign me-1"></i> <?= $t['total_income'] ?></div>
                     <div class="stat-value">¥<?= number_format(array_sum($store_totals)) ?></div>
                 </div>
-                <div class="stat-box" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
-                    <div class="stat-label"><i class="fas fa-chart-line"></i> 月平均</div>
+                <div class="stat-card stat-accent-4">
+                    <div class="stat-label"><i class="fas fa-chart-line me-1"></i> <?= $t['avg_monthly'] ?></div>
                     <div class="stat-value">
                         ¥<?= number_format(count($months) > 0 ? array_sum($store_totals) / count($months) : 0) ?></div>
                 </div>
             </div>
 
+            <!-- Chart Type Selector -->
             <div class="chart-selector">
-                <div class="selector-label">
-                    <i class="fas fa-chart-bar"></i>
-                    チャートタイプを選択
+                <div class="chart-tab active" data-chart="bar">
+                    <i class="fas fa-chart-bar"></i> <?= $t['bar'] ?>
                 </div>
-                <div class="chart-type-buttons">
-                    <button class="chart-type-btn active" data-chart="bar">
-                        <i class="fas fa-chart-bar"></i>
-                        棒グラフ
-                    </button>
-                    <button class="chart-type-btn" data-chart="line">
-                        <i class="fas fa-chart-line"></i>
-                        折れ線グラフ
-                    </button>
-                    <button class="chart-type-btn" data-chart="radar">
-                        <i class="fas fa-spider"></i>
-                        レーダーチャート
-                    </button>
-                    <button class="chart-type-btn" data-chart="pie">
-                        <i class="fas fa-chart-pie"></i>
-                        円グラフ
-                    </button>
+                <div class="chart-tab" data-chart="line">
+                    <i class="fas fa-chart-line"></i> <?= $t['line'] ?>
+                </div>
+                <div class="chart-tab" data-chart="radar">
+                    <i class="fas fa-spider"></i> <?= $t['radar'] ?>
+                </div>
+                <div class="chart-tab" data-chart="pie">
+                    <i class="fas fa-chart-pie"></i> <?= $t['pie'] ?>
                 </div>
             </div>
 
+            <!-- Chart Card -->
             <div class="chart-card">
                 <div class="chart-wrapper active" id="barChart">
-                    <div class="chart-description">
-                        <i class="fas fa-info-circle"></i>
-                        各月における店舗ごとの給与を比較できます
+                    <div class="chart-desc">
+                        <i class="fas fa-info-circle"></i> <?= $t['bar_desc'] ?>
                     </div>
                     <div class="chart-container">
                         <canvas id="barCanvas"></canvas>
@@ -748,9 +541,8 @@ foreach ($store_averages as $store => $avg) {
                 </div>
 
                 <div class="chart-wrapper" id="lineChart">
-                    <div class="chart-description">
-                        <i class="fas fa-info-circle"></i>
-                        時系列での給与トレンドを確認できます
+                    <div class="chart-desc">
+                        <i class="fas fa-info-circle"></i> <?= $t['line_desc'] ?>
                     </div>
                     <div class="chart-container">
                         <canvas id="lineCanvas"></canvas>
@@ -758,9 +550,8 @@ foreach ($store_averages as $store => $avg) {
                 </div>
 
                 <div class="chart-wrapper" id="radarChart">
-                    <div class="chart-description">
-                        <i class="fas fa-info-circle"></i>
-                        店舗のパフォーマンスを多角的に比較します（総収入・平均月収・稼働月数）
+                    <div class="chart-desc">
+                        <i class="fas fa-info-circle"></i> <?= $t['radar_desc'] ?>
                     </div>
                     <div class="chart-container">
                         <canvas id="radarCanvas"></canvas>
@@ -768,9 +559,8 @@ foreach ($store_averages as $store => $avg) {
                 </div>
 
                 <div class="chart-wrapper" id="pieChart">
-                    <div class="chart-description">
-                        <i class="fas fa-info-circle"></i>
-                        店舗別の総収入の割合を表示します
+                    <div class="chart-desc">
+                        <i class="fas fa-info-circle"></i> <?= $t['pie_desc'] ?>
                     </div>
                     <div class="chart-container">
                         <canvas id="pieCanvas"></canvas>
@@ -780,20 +570,14 @@ foreach ($store_averages as $store => $avg) {
 
         <?php else: ?>
             <div class="chart-card">
-                <div class="no-data">
-                    <i class="fas fa-chart-bar"></i>
-                    <div class="no-data-text">まだ給与データがありません</div>
-                    <div class="no-data-subtext">給与を追加してグラフを表示しましょう！</div>
+                <div class="empty-state">
+                    <i class="fas fa-chart-bar empty-icon"></i>
+                    <p style="font-weight:600;"><?= $t['no_data'] ?></p>
+                    <p style="font-size:13px;opacity:0.7;"><?= $t['no_data_sub'] ?></p>
                 </div>
             </div>
         <?php endif; ?>
 
-        <div class="text-center">
-            <a href="dashboard.php" class="back-link">
-                <i class="fas fa-arrow-left"></i>
-                ダッシュボードに戻る
-            </a>
-        </div>
     </div>
 
     <?php if (count($data) > 0): ?>
@@ -807,9 +591,27 @@ foreach ($store_averages as $store => $avg) {
             const colors = <?= json_encode($colors) ?>;
             const borderColors = <?= json_encode($borderColors) ?>;
 
+            // Translation strings for JS
+            const chartTrans = {
+                barTitle: '<?= addslashes($t['bar_title']) ?>',
+                lineTitle: '<?= addslashes($t['line_title']) ?>',
+                radarTitle: '<?= addslashes($t['radar_title']) ?>',
+                pieTitle: '<?= addslashes($t['pie_title']) ?>',
+                amountLabel: '<?= addslashes($t['amount_label']) ?>',
+                monthLabel: '<?= addslashes($t['month_label']) ?>',
+                totalLabel: '<?= addslashes($t['total_label']) ?>',
+                avgLabel: '<?= addslashes($t['avg_label']) ?>',
+                activeMonths: '<?= addslashes($t['active_months']) ?>'
+            };
+
+            // Dark theme configuration for Chart.js
+            Chart.defaults.color = 'rgba(255, 255, 255, 0.7)';
+            Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.1)';
+            Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
+
             let barChartInstance, lineChartInstance, radarChartInstance, pieChartInstance;
 
-            function getBarLineOptions(title, isBar) {
+            function getBarLineOptions(title) {
                 return {
                     responsive: true,
                     maintainAspectRatio: false,
@@ -817,38 +619,23 @@ foreach ($store_averages as $store => $avg) {
                         title: {
                             display: true,
                             text: title,
-                            font: {
-                                size: isMobile ? 14 : 18,
-                                weight: 'bold',
-                                family: 'Poppins'
-                            },
-                            padding: {
-                                top: isMobile ? 5 : 10,
-                                bottom: isMobile ? 10 : 15
-                            },
-                            color: '#2c3e50'
+                            font: { size: 14, weight: 'bold' },
+                            color: 'rgba(255,255,255,0.9)',
+                            padding: { bottom: 10 }
                         },
                         legend: {
-                            display: true,
-                            position: isMobile ? 'bottom' : 'top',
-                            labels: {
-                                font: {
-                                    size: isMobile ? 10 : 12,
-                                    family: 'Poppins'
-                                },
-                                padding: isMobile ? 8 : 12,
-                                usePointStyle: true
-                            }
+                            position: 'bottom',
+                            labels: { font: { size: 10 }, padding: 10, usePointStyle: true, color: 'rgba(255,255,255,0.7)' }
                         },
                         tooltip: {
                             backgroundColor: 'rgba(0, 0, 0, 0.85)',
-                            titleFont: { size: isMobile ? 11 : 13, weight: 'bold' },
-                            bodyFont: { size: isMobile ? 10 : 12 },
-                            padding: isMobile ? 10 : 12,
+                            titleFont: { size: 12, weight: 'bold' },
+                            bodyFont: { size: 11 },
+                            padding: 10,
                             cornerRadius: 8,
                             callbacks: {
-                                label: function (context) {
-                                    return context.dataset.label + ': ¥' + context.parsed.y.toLocaleString();
+                                label: function (ctx) {
+                                    return ctx.dataset.label + ': ¥' + ctx.parsed.y.toLocaleString();
                                 }
                             }
                         }
@@ -856,32 +643,20 @@ foreach ($store_averages as $store => $avg) {
                     scales: {
                         y: {
                             beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: '金額（¥）',
-                                font: { size: isMobile ? 11 : 14, weight: 'bold' }
-                            },
+                            title: { display: !isMobile, text: chartTrans.amountLabel, font: { size: 12 }, color: 'rgba(255,255,255,0.5)' },
                             ticks: {
-                                font: { size: isMobile ? 9 : 11 },
-                                callback: function (value) {
-                                    if (isMobile && value >= 10000) {
-                                        return '¥' + (value / 10000).toFixed(0) + '万';
-                                    }
-                                    return '¥' + value.toLocaleString();
+                                font: { size: 10 },
+                                color: 'rgba(255,255,255,0.5)',
+                                callback: function (v) {
+                                    if (v >= 10000) return '¥' + (v / 10000).toFixed(0) + '万';
+                                    return '¥' + v.toLocaleString();
                                 }
-                            }
+                            },
+                            grid: { color: 'rgba(255,255,255,0.05)' }
                         },
                         x: {
-                            title: {
-                                display: !isMobile,
-                                text: '月',
-                                font: { size: 14, weight: 'bold' }
-                            },
-                            ticks: {
-                                font: { size: isMobile ? 8 : 11 },
-                                maxRotation: isMobile ? 45 : 0,
-                                minRotation: isMobile ? 45 : 0
-                            }
+                            ticks: { font: { size: 9 }, color: 'rgba(255,255,255,0.5)', maxRotation: 45, minRotation: 45 },
+                            grid: { color: 'rgba(255,255,255,0.05)' }
                         }
                     }
                 };
@@ -894,62 +669,29 @@ foreach ($store_averages as $store => $avg) {
                     plugins: {
                         title: {
                             display: true,
-                            text: '店舗パフォーマンス比較',
-                            font: {
-                                size: isMobile ? 14 : 18,
-                                weight: 'bold',
-                                family: 'Poppins'
-                            },
-                            padding: {
-                                top: isMobile ? 5 : 10,
-                                bottom: isMobile ? 10 : 15
-                            },
-                            color: '#2c3e50'
+                            text: chartTrans.radarTitle,
+                            font: { size: 14, weight: 'bold' },
+                            color: 'rgba(255,255,255,0.9)',
+                            padding: { bottom: 10 }
                         },
                         legend: {
-                            display: true,
-                            position: isMobile ? 'bottom' : 'top',
-                            labels: {
-                                font: {
-                                    size: isMobile ? 10 : 12,
-                                    family: 'Poppins'
-                                },
-                                padding: isMobile ? 8 : 12,
-                                usePointStyle: true
-                            }
+                            position: 'bottom',
+                            labels: { font: { size: 10 }, padding: 10, usePointStyle: true, color: 'rgba(255,255,255,0.7)' }
                         },
                         tooltip: {
                             backgroundColor: 'rgba(0, 0, 0, 0.85)',
-                            titleFont: { size: isMobile ? 11 : 13, weight: 'bold' },
-                            bodyFont: { size: isMobile ? 10 : 12 },
-                            padding: isMobile ? 10 : 12,
                             cornerRadius: 8
                         }
                     },
                     scales: {
                         r: {
                             beginAtZero: true,
-                            angleLines: {
-                                color: 'rgba(102, 126, 234, 0.2)',
-                                lineWidth: 1
-                            },
-                            grid: {
-                                color: 'rgba(102, 126, 234, 0.15)',
-                                circular: true
-                            },
-                            ticks: {
-                                font: { size: isMobile ? 9 : 11 },
-                                backdropColor: 'rgba(255, 255, 255, 0.8)',
-                                color: '#667eea',
-                                showLabelBackdrop: true
-                            },
+                            angleLines: { color: 'rgba(255,255,255,0.1)' },
+                            grid: { color: 'rgba(255,255,255,0.08)', circular: true },
+                            ticks: { font: { size: 9 }, color: 'rgba(255,255,255,0.5)', backdropColor: 'rgba(0,0,0,0)' },
                             pointLabels: {
-                                font: {
-                                    size: isMobile ? 11 : 14,
-                                    weight: '600',
-                                    family: 'Poppins'
-                                },
-                                color: '#2c3e50'
+                                font: { size: 11, weight: '600' },
+                                color: 'rgba(255,255,255,0.8)'
                             }
                         }
                     }
@@ -959,49 +701,27 @@ foreach ($store_averages as $store => $avg) {
             function getPieOptions() {
                 return {
                     responsive: true,
-                    maintainAspectRatio: true,
-                    aspectRatio: isMobile ? 1.2 : 1.5,
+                    maintainAspectRatio: false,
                     plugins: {
                         title: {
                             display: true,
-                            text: '店舗別総収入の割合',
-                            font: {
-                                size: isMobile ? 14 : 18,
-                                weight: 'bold',
-                                family: 'Poppins'
-                            },
-                            padding: {
-                                top: isMobile ? 5 : 10,
-                                bottom: isMobile ? 10 : 15
-                            },
-                            color: '#2c3e50'
+                            text: chartTrans.pieTitle,
+                            font: { size: 14, weight: 'bold' },
+                            color: 'rgba(255,255,255,0.9)',
+                            padding: { bottom: 10 }
                         },
                         legend: {
-                            display: true,
-                            position: isMobile ? 'bottom' : 'right',
-                            align: 'center',
-                            labels: {
-                                font: {
-                                    size: isMobile ? 10 : 12,
-                                    family: 'Poppins'
-                                },
-                                padding: isMobile ? 8 : 15,
-                                usePointStyle: true,
-                                boxWidth: 15,
-                                boxHeight: 15
-                            }
+                            position: 'bottom',
+                            labels: { font: { size: 10 }, padding: 10, usePointStyle: true, boxWidth: 12, color: 'rgba(255,255,255,0.7)' }
                         },
                         tooltip: {
                             backgroundColor: 'rgba(0, 0, 0, 0.85)',
-                            titleFont: { size: isMobile ? 11 : 13, weight: 'bold' },
-                            bodyFont: { size: isMobile ? 10 : 12 },
-                            padding: isMobile ? 10 : 12,
                             cornerRadius: 8,
                             callbacks: {
-                                label: function (context) {
-                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                    const percentage = ((context.parsed / total) * 100).toFixed(1);
-                                    return context.label + ': ¥' + context.parsed.toLocaleString() + ' (' + percentage + '%)';
+                                label: function (ctx) {
+                                    const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                                    const pct = ((ctx.parsed / total) * 100).toFixed(1);
+                                    return ctx.label + ': ¥' + ctx.parsed.toLocaleString() + ' (' + pct + '%)';
                                 }
                             }
                         }
@@ -1010,38 +730,31 @@ foreach ($store_averages as $store => $avg) {
             }
 
             function initCharts() {
-                const barCtx = document.getElementById('barCanvas').getContext('2d');
-                barChartInstance = new Chart(barCtx, {
+                barChartInstance = new Chart(document.getElementById('barCanvas').getContext('2d'), {
                     type: 'bar',
-                    data: {
-                        labels: months,
-                        datasets: datasets
-                    },
-                    options: getBarLineOptions('店舗別の月別給与比較', true)
+                    data: { labels: months, datasets: datasets },
+                    options: getBarLineOptions(chartTrans.barTitle)
                 });
 
-                const lineCtx = document.getElementById('lineCanvas').getContext('2d');
-                lineChartInstance = new Chart(lineCtx, {
+                lineChartInstance = new Chart(document.getElementById('lineCanvas').getContext('2d'), {
                     type: 'line',
                     data: {
                         labels: months,
-                        datasets: datasets.map(d => ({ ...d, tension: 0.4, fill: false, borderWidth: 3, pointRadius: 4, pointHoverRadius: 6 }))
+                        datasets: datasets.map(d => ({ ...d, tension: 0.4, fill: false, borderWidth: 3, pointRadius: 3, pointHoverRadius: 5 }))
                     },
-                    options: getBarLineOptions('月別給与トレンド', false)
+                    options: getBarLineOptions(chartTrans.lineTitle)
                 });
 
-                const radarCtx = document.getElementById('radarCanvas').getContext('2d');
-                radarChartInstance = new Chart(radarCtx, {
+                radarChartInstance = new Chart(document.getElementById('radarCanvas').getContext('2d'), {
                     type: 'radar',
                     data: {
-                        labels: ['総収入', '平均月収', '稼働月数'],
+                        labels: [chartTrans.totalLabel, chartTrans.avgLabel, chartTrans.activeMonths],
                         datasets: radarDatasets
                     },
                     options: getRadarOptions()
                 });
 
-                const pieCtx = document.getElementById('pieCanvas').getContext('2d');
-                pieChartInstance = new Chart(pieCtx, {
+                pieChartInstance = new Chart(document.getElementById('pieCanvas').getContext('2d'), {
                     type: 'pie',
                     data: {
                         labels: storeNames,
@@ -1058,40 +771,20 @@ foreach ($store_averages as $store => $avg) {
 
             initCharts();
 
-            document.querySelectorAll('.chart-type-btn').forEach(btn => {
+            // Chart tab switching
+            document.querySelectorAll('.chart-tab').forEach(btn => {
                 btn.addEventListener('click', function () {
-                    document.querySelectorAll('.chart-type-btn').forEach(b => b.classList.remove('active'));
+                    document.querySelectorAll('.chart-tab').forEach(b => b.classList.remove('active'));
                     this.classList.add('active');
-                    document.querySelectorAll('.chart-wrapper').forEach(chart => chart.classList.remove('active'));
+                    document.querySelectorAll('.chart-wrapper').forEach(c => c.classList.remove('active'));
                     const chartType = this.getAttribute('data-chart');
                     document.getElementById(chartType + 'Chart').classList.add('active');
                 });
             });
-
-            let resizeTimer;
-            window.addEventListener('resize', function () {
-                clearTimeout(resizeTimer);
-                resizeTimer = setTimeout(function () {
-                    const newIsMobile = window.innerWidth <= 768;
-
-                    [barChartInstance, lineChartInstance, radarChartInstance, pieChartInstance].forEach(chart => {
-                        if (chart) {
-                            if (chart === pieChartInstance) {
-                                chart.options.plugins.legend.position = newIsMobile ? 'bottom' : 'right';
-                            } else {
-                                chart.options.plugins.legend.position = newIsMobile ? 'bottom' : 'top';
-                            }
-                            chart.options.plugins.title.font.size = newIsMobile ? 14 : 18;
-                            chart.options.plugins.legend.labels.font.size = newIsMobile ? 10 : 12;
-                            chart.update();
-                        }
-                    });
-                }, 250);
-            });
         </script>
     <?php endif; ?>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 
 </html>
